@@ -28,9 +28,9 @@ class TwoLayerNet(object):
         Initialize a new network.
 
         Inputs:
-        - input_dim: An integer giving the size of the input
-        - hidden_dim: An integer giving the size of the hidden layer
-        - num_classes: An integer giving the number of classes to classify
+        - input_dim: An integer giving the size of the input #(D)
+        - hidden_dim: An integer giving the size of the hidden layer #H
+        - num_classes: An integer giving the number of classes to classify #C
         - dropout: Scalar between 0 and 1 giving dropout strength.
         - weight_scale: Scalar giving the standard deviation for random
           initialization of the weights.
@@ -81,7 +81,12 @@ class TwoLayerNet(object):
         # TODO: Implement the forward pass for the two-layer net, computing the    #
         # class scores for X and storing them in the scores variable.              #
         ############################################################################
-        pass
+        w1 = self.params['W1']
+        w2 = self.params['W2']
+        b1 = self.params['b1']
+        b2 = self.params['b2']
+        a, cache1 = affine_relu_forward(X, w1, b1)
+        scores, cache2 = affine_forward(a, w2, b2)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -101,7 +106,14 @@ class TwoLayerNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        pass
+        loss, dout = softmax_loss(scores, y)
+        loss += .5*self.reg*(np.sum(w1**2)+np.sum(w2**2))
+        da, dw2, db2 = affine_backward(dout, cache2)
+        dx, dw1, db1 = affine_relu_backward(da, cache1)
+        grads['W1'] = dw1 + self.reg*w1
+        grads['W2'] = dw2 + self.reg*w2
+        grads['b1'] = db1
+        grads['b2'] = db2
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
