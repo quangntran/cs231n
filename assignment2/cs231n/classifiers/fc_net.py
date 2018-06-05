@@ -157,7 +157,7 @@ class FullyConnectedNet(object):
           this datatype. float32 is faster but less accurate, so you should use
           float64 for numeric gradient checking.
         - seed: If not None, then pass this random seed to the dropout layers. This
-          will make the dropout layers deteriminstic so we can gradient check the
+          will make the dropout layers deteriministic so we can gradient check the
           model.
         """
         self.use_batchnorm = use_batchnorm
@@ -179,7 +179,13 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
-        pass
+        self.params['W1'] = np.random.normal(0, weight_scale, (input_dim, hidden_dims[0]))
+        self.params['b1'] = np.zeros(hidden_dims[0])
+        for i in range(len(hidden_dims)-1):        
+            self.params['W'+str(i+2)] = np.random.normal(0, weight_scale, (hidden_dims[i], hidden_dims[i+1]))          
+            self.params['b'+str(i+2)] = np.zeros(hidden_dims[i+1])
+        self.params['W'+str(i+3)] = np.random.normal(0, weight_scale, (hidden_dims[i+1], num_classes))
+        self.params['b'+str(i+3)] = np.zeros(num_classes)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -237,7 +243,11 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass for the second batch normalization #
         # layer, etc.                                                              #
         ############################################################################
-        pass
+        a = X
+        cache = {}
+        for i in range(self.num_layers-1):
+            a, cache['cache'+str(i+1)] = affine_relu_forward(a,self.params['W'+str(i+1)],self.params['b'+str(i+1)])
+        scores, cache['cache'+str(self.num_layers)] = affine_forward(a, self.params['W'+str(self.num_layers)],self.params['b'+str(self.num_layers)])
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -259,10 +269,36 @@ class FullyConnectedNet(object):
         # NOTE: To ensure that your implementation matches ours and you pass the   #
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
-        ############################################################################
-        pass
+        ############################################################################        
+        loss, dout = softmax_loss(scores, y)
+        dout, grads['W'+str(self.num_layers)], grads['b'+str(self.num_layers)] = affine_backward(dout, cache['cache'+str(self.num_layers)])
+        grads['W'+str(self.num_layers)] += self.reg*self.params['W'+str(self.num_layers)]
+        sum_of_weight_squares = np.sum((self.params['W1'])**2)
+        for i in range(1, self.num_layers):
+            #print(i)
+            sum_of_weight_squares += np.sum((self.params['W'+str(i+1)])**2)
+            dout, grads['W'+str(self.num_layers-i)], grads['b'+str(self.num_layers-i)] = affine_relu_backward(dout, cache['cache'+str(self.num_layers-i)])
+            grads['W'+str(self.num_layers-i)] += self.reg*self.params['W'+str(self.num_layers-i)]
+        loss += .5*self.reg*sum_of_weight_squares               
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
 
         return loss, grads
+##########################
+#        w1 = self.params['W1']
+#        w2 = self.params['W2']
+#        b1 = self.params['b1']
+#        b2 = self.params['b2']
+#        a, cache1 = affine_relu_forward(X, w1, b1)
+#        scores, cache2 = affine_forward(a, w2, b2)
+        
+##########################        
+#        loss, dout = softmax_loss(scores, y)
+#        loss += .5*self.reg*(np.sum(w1**2)+np.sum(w2**2))
+#        da, dw2, db2 = affine_backward(dout, cache2)
+#        dx, dw1, db1 = affine_relu_backward(da, cache1)
+#        grads['W1'] = dw1 + self.reg*w1
+#        grads['W2'] = dw2 + self.reg*w2
+#        grads['b1'] = db1
+#        grads['b2'] = db2
