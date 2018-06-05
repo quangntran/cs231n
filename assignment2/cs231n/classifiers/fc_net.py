@@ -285,20 +285,3 @@ class FullyConnectedNet(object):
         ############################################################################
 
         return loss, grads
-##########################
-#        w1 = self.params['W1']
-#        w2 = self.params['W2']
-#        b1 = self.params['b1']
-#        b2 = self.params['b2']
-#        a, cache1 = affine_relu_forward(X, w1, b1)
-#        scores, cache2 = affine_forward(a, w2, b2)
-        
-##########################        
-#        loss, dout = softmax_loss(scores, y)
-#        loss += .5*self.reg*(np.sum(w1**2)+np.sum(w2**2))
-#        da, dw2, db2 = affine_backward(dout, cache2)
-#        dx, dw1, db1 = affine_relu_backward(da, cache1)
-#        grads['W1'] = dw1 + self.reg*w1
-#        grads['W2'] = dw2 + self.reg*w2
-#        grads['b1'] = db1
-#        grads['b2'] = db2
