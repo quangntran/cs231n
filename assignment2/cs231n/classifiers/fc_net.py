@@ -186,6 +186,12 @@ class FullyConnectedNet(object):
             self.params['b'+str(i+2)] = np.zeros(hidden_dims[i+1])
         self.params['W'+str(i+3)] = np.random.normal(0, weight_scale, (hidden_dims[i+1], num_classes))
         self.params['b'+str(i+3)] = np.zeros(num_classes)
+        
+        if self.use_batchnorm:            
+            for i in range(self.num_layers-1):
+            self.params['gamma'+str(i+1)] = np.ones((hidden_dims[i]))
+            self.params['beta'+str(i+1)] = np.zeroes((hidden_dims[i]))
+            
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -246,7 +252,15 @@ class FullyConnectedNet(object):
         a = X
         cache = {}
         for i in range(self.num_layers-1):
-            a, cache['cache'+str(i+1)] = affine_relu_forward(a,self.params['W'+str(i+1)],self.params['b'+str(i+1)])
+            w = self.params['W'+str(i+1)]
+            b = self.params['b'+str(i+1)]
+            if self.use_barchnorm:
+                gamma = self.params['gamma'+str(i+1)]
+                beta = self.params['beta'+str(i+1)]
+                bn_param = self.bn_params[i+1]
+                a, cache['cache'+str(i+1)] = affine_bn_relu_forward(a,w,b,gamma,beta,bn_para)
+            else:
+                a, cache['cache'+str(i+1)] = affine_relu_forward(a,w,b)
         scores, cache['cache'+str(self.num_layers)] = affine_forward(a, self.params['W'+str(self.num_layers)],self.params['b'+str(self.num_layers)])
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -285,3 +299,4 @@ class FullyConnectedNet(object):
         ############################################################################
 
         return loss, grads
+    
