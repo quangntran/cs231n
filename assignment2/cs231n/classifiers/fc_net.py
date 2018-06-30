@@ -189,8 +189,8 @@ class FullyConnectedNet(object):
         
         if self.use_batchnorm:            
             for i in range(self.num_layers-1):
-            self.params['gamma'+str(i+1)] = np.ones((hidden_dims[i]))
-            self.params['beta'+str(i+1)] = np.zeroes((hidden_dims[i]))
+                self.params['gamma'+str(i+1)] = np.ones((hidden_dims[i]))
+                self.params['beta'+str(i+1)] = np.zeros((hidden_dims[i]))
             
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -254,11 +254,11 @@ class FullyConnectedNet(object):
         for i in range(self.num_layers-1):
             w = self.params['W'+str(i+1)]
             b = self.params['b'+str(i+1)]
-            if self.use_barchnorm:
+            if self.use_batchnorm:
                 gamma = self.params['gamma'+str(i+1)]
                 beta = self.params['beta'+str(i+1)]
-                bn_param = self.bn_params[i+1]
-                a, cache['cache'+str(i+1)] = affine_bn_relu_forward(a,w,b,gamma,beta,bn_para)
+                bn_param = self.bn_params[i]
+                a, cache['cache'+str(i+1)] = affine_bn_relu_forward(a,w,b,gamma,beta,bn_param)
             else:
                 a, cache['cache'+str(i+1)] = affine_relu_forward(a,w,b)
         scores, cache['cache'+str(self.num_layers)] = affine_forward(a, self.params['W'+str(self.num_layers)],self.params['b'+str(self.num_layers)])
@@ -285,14 +285,24 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################        
         loss, dout = softmax_loss(scores, y)
+        
+            
         dout, grads['W'+str(self.num_layers)], grads['b'+str(self.num_layers)] = affine_backward(dout, cache['cache'+str(self.num_layers)])
+        
         grads['W'+str(self.num_layers)] += self.reg*self.params['W'+str(self.num_layers)]
+        
         sum_of_weight_squares = np.sum((self.params['W1'])**2)
-        for i in range(1, self.num_layers):
-            #print(i)
-            sum_of_weight_squares += np.sum((self.params['W'+str(i+1)])**2)
-            dout, grads['W'+str(self.num_layers-i)], grads['b'+str(self.num_layers-i)] = affine_relu_backward(dout, cache['cache'+str(self.num_layers-i)])
-            grads['W'+str(self.num_layers-i)] += self.reg*self.params['W'+str(self.num_layers-i)]
+        if self.use_batchnorm:
+            for i in range(1,self.num_layers):
+                sum_of_weight_squares += np.sum((self.params['W'+str(i+1)])**2)
+                dout, grads['W'+str(self.num_layers-i)], grads['b'+str(self.num_layers-i)], grads['gamma'+str(self.num_layers-i)], grads['beta'+str(self.num_layers-i)] = affine_bn_relu_backward(dout, cache['cache'+str(self.num_layers-i)])
+                grads['W'+str(self.num_layers-i)] += self.reg*self.params['W'+str(self.num_layers-i)]
+                
+        else:
+            for i in range(1, self.num_layers):
+                sum_of_weight_squares += np.sum((self.params['W'+str(i+1)])**2)
+                dout, grads['W'+str(self.num_layers-i)], grads['b'+str(self.num_layers-i)] = affine_relu_backward(dout, cache['cache'+str(self.num_layers-i)])
+                grads['W'+str(self.num_layers-i)] += self.reg*self.params['W'+str(self.num_layers-i)]
         loss += .5*self.reg*sum_of_weight_squares               
         ############################################################################
         #                             END OF YOUR CODE                             #
