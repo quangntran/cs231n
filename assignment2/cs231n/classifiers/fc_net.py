@@ -259,6 +259,9 @@ class FullyConnectedNet(object):
                 beta = self.params['beta'+str(i+1)]
                 bn_param = self.bn_params[i]
                 a, cache['cache'+str(i+1)] = affine_bn_relu_forward(a,w,b,gamma,beta,bn_param)
+                if self.use_dropout:
+                    a, dropout_cache= dropout_forward(a, self.dropout_param)
+                    cache['cache'+str(i+1)] = (cache['cache'+str(i+1)], dropout_cache)
             else:
                 a, cache['cache'+str(i+1)] = affine_relu_forward(a,w,b)
         scores, cache['cache'+str(self.num_layers)] = affine_forward(a, self.params['W'+str(self.num_layers)],self.params['b'+str(self.num_layers)])
@@ -294,6 +297,9 @@ class FullyConnectedNet(object):
         sum_of_weight_squares = np.sum((self.params['W1'])**2)
         if self.use_batchnorm:
             for i in range(1,self.num_layers):
+                if self.use_dropout:
+                    dout = dropout_backward(dout, cache['cache'+str(self.num_layers-i)][-1])
+                    cache['cache'+str(self.num_layers-i)] = cache['cache'+str(self.num_layers-i)][:-1]
                 sum_of_weight_squares += np.sum((self.params['W'+str(i+1)])**2)
                 dout, grads['W'+str(self.num_layers-i)], grads['b'+str(self.num_layers-i)], grads['gamma'+str(self.num_layers-i)], grads['beta'+str(self.num_layers-i)] = affine_bn_relu_backward(dout, cache['cache'+str(self.num_layers-i)])
                 grads['W'+str(self.num_layers-i)] += self.reg*self.params['W'+str(self.num_layers-i)]
