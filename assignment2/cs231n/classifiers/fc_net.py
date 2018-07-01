@@ -181,11 +181,12 @@ class FullyConnectedNet(object):
         ############################################################################
         self.params['W1'] = np.random.normal(0, weight_scale, (input_dim, hidden_dims[0]))
         self.params['b1'] = np.zeros(hidden_dims[0])
-        for i in range(len(hidden_dims)-1):        
-            self.params['W'+str(i+2)] = np.random.normal(0, weight_scale, (hidden_dims[i], hidden_dims[i+1]))          
-            self.params['b'+str(i+2)] = np.zeros(hidden_dims[i+1])
-        self.params['W'+str(i+3)] = np.random.normal(0, weight_scale, (hidden_dims[i+1], num_classes))
-        self.params['b'+str(i+3)] = np.zeros(num_classes)
+        
+        for i in range(self.num_layers):
+            first_dim = hidden_dims[i-1] if i != 0 else input_dim
+            sec_dim = hidden_dims[i] if i!= (self.num_layers-1) else num_classes
+            self.params['W'+str(i+1)] = np.random.normal(0, weight_scale, (first_dim, sec_dim))          
+            self.params['b'+str(i+1)] = np.zeros(sec_dim)
         
         if self.use_batchnorm:            
             for i in range(self.num_layers-1):
