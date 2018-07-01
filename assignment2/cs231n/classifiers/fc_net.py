@@ -262,9 +262,14 @@ class FullyConnectedNet(object):
                 a, cache['cache'+str(i+1)] = affine_bn_relu_forward(a,w,b,gamma,beta,bn_param)
                 if self.use_dropout:
                     a, dropout_cache= dropout_forward(a, self.dropout_param)
-                    cache['cache'+str(i+1)] = (cache['cache'+str(i+1)], dropout_cache)
+                    mask1, mask2, mask3 = cache['cache'+str(i+1)]
+                    cache['cache'+str(i+1)] = (mask1, mask2, mask3, dropout_cache)
             else:
                 a, cache['cache'+str(i+1)] = affine_relu_forward(a,w,b)
+                if self.use_dropout:                    
+                    a, dropout_cache= dropout_forward(a, self.dropout_param)
+                    mask1, mask2 = cache['cache'+str(i+1)]
+                    cache['cache'+str(i+1)] = (mask1, mask2, dropout_cache)
         scores, cache['cache'+str(self.num_layers)] = affine_forward(a, self.params['W'+str(self.num_layers)],self.params['b'+str(self.num_layers)])
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -290,11 +295,9 @@ class FullyConnectedNet(object):
         ############################################################################        
         loss, dout = softmax_loss(scores, y)
         
-            
-        dout, grads['W'+str(self.num_layers)], grads['b'+str(self.num_layers)] = affine_backward(dout, cache['cache'+str(self.num_layers)])
-        
-        grads['W'+str(self.num_layers)] += self.reg*self.params['W'+str(self.num_layers)]
-        
+           
+        dout, grads['W'+str(self.num_layers)], grads['b'+str(self.num_layers)] = affine_backward(dout, cache['cache'+str(self.num_layers)])        
+        grads['W'+str(self.num_layers)] += self.reg*self.params['W'+str(self.num_layers)]        
         sum_of_weight_squares = np.sum((self.params['W1'])**2)
         if self.use_batchnorm:
             for i in range(1,self.num_layers):
@@ -307,6 +310,9 @@ class FullyConnectedNet(object):
                 
         else:
             for i in range(1, self.num_layers):
+                if self.use_dropout:
+                    dout = dropout_backward(dout, cache['cache'+str(self.num_layers-i)][-1])
+                    cache['cache'+str(self.num_layers-i)] = cache['cache'+str(self.num_layers-i)][:-1]
                 sum_of_weight_squares += np.sum((self.params['W'+str(i+1)])**2)
                 dout, grads['W'+str(self.num_layers-i)], grads['b'+str(self.num_layers-i)] = affine_relu_backward(dout, cache['cache'+str(self.num_layers-i)])
                 grads['W'+str(self.num_layers-i)] += self.reg*self.params['W'+str(self.num_layers-i)]
