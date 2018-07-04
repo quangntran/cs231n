@@ -140,7 +140,7 @@ def adam(x, dx, config=None):
     # stored in config.                                                       #
     ###########################################################################
     # t is your iteration counter going from 1 to infinity
-    config['t']+=1
+    config['t']+=1    
     config['m'] = config['beta1']*config['m'] + (1-config['beta1'])*dx
     mt = config['m'] / (1-config['beta1']**config['t'])
     config['v'] = config['beta2']*config['v'] + (1-config['beta2'])*(dx**2)

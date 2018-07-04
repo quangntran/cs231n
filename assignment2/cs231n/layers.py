@@ -375,7 +375,7 @@ def conv_forward_naive(x, w, b, conv_param):
 
     The input consists of N data points, each with C channels, height H and
     width W. We convolve each input with F different filters, where each filter
-    spans all C channels and has height HH and width HH.
+    spans all C channels and has height HH and width WW.
 
     Input:
     - x: Input data of shape (N, C, H, W)
@@ -392,12 +392,57 @@ def conv_forward_naive(x, w, b, conv_param):
       W' = 1 + (W + 2 * pad - WW) / stride
     - cache: (x, w, b, conv_param)
     """
-    out = None
+    out = None 
     ###########################################################################
     # TODO: Implement the convolutional forward pass.                         #
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
-    pass
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+    H_prime = int(1 + (H + 2 * pad - HH) / stride)
+    W_prime = int(1 + (W + 2 * pad - WW) / stride)
+    # pad with each "plane" (shape (H,W)) of the inputs
+    def pad_with(vector, pad_width, iaxis, kwargs):
+        pad_value = kwargs.get('padder', 0)
+        vector[:pad_width[0]] = pad_value
+        vector[-pad_width[1]:] = pad_value
+        return vector
+    planes_padded = {}
+    ind = 0
+    for n in range(N):
+        for c in range(C):
+            planes_padded[str(ind)] = x[n,c,:,:]
+            ind += 1
+    for i in range(len(planes_padded)):
+        planes_padded[str(i)] = np.pad(planes_padded[str(i)], pad, pad_with)
+    #now concatenate all the planes to go back to the shape (N,C,H,W):
+    cubes_padded = {}
+    for i in range(N):
+        cubes_padded[str(i)] = np.array([planes_padded[str(3*i+c)] for c in range(C)])
+    x = np.array([cubes_padded[str(i)] for i in range(N)])
+    def dot_product_two_cubes(cube1, cube2):
+        new1 = np.reshape(cube1,(-1,1))
+        new2 = np.reshape(cube2,(-1,1))
+        return np.dot(new1.T,new2)
+    outs = {}
+    for n in range(N): 
+        
+        layers = {}
+        for f in range(F):
+            
+            fil = w[f,:,:,:]
+            products = []
+            for h in range(H_prime):
+                for w_prime in range(W_prime):
+                    cube = cubes_padded[str(n)][:,stride*h:stride*h+HH,stride*w_prime:stride*w_prime+WW]
+                    products.append(dot_product_two_cubes(cube, fil)+b[f])
+
+            layers[str(f)]=np.reshape(np.array(products),(H_prime,W_prime))
+        outs[str(n)] = np.array([layers[str(f)] for f in range(F)])
+
+    out = np.array([outs[str(n)] for n in range(N)])
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -422,7 +467,7 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
-    pass
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
