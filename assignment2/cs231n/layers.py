@@ -532,7 +532,7 @@ def max_pool_forward_naive(x, pool_param):
     """
     out = None
     ###########################################################################
-    # TODO: Implement the max pooling forward pass                            #
+    ## TODO: Implement the max pooling forward pass                           #
     ###########################################################################
     (N, C, H, W) = x.shape
     pool_height = pool_param['pool_height']
