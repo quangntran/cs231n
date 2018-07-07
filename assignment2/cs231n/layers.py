@@ -488,7 +488,8 @@ def conv_backward_naive(dout, cache):
                 region = dx_cube[:,stride*j:stride*j+HH,stride*k:stride*k+WW]
                 for f in range(F):
                     region += w[f,:,:,:]*dout_cube[f,j,k]           
-
+    # strip the padding
+    dx = dx[:,:,pad:-pad,pad:-pad]
     
     #compute dw
     
