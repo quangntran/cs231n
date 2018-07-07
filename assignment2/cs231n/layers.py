@@ -479,6 +479,7 @@ def conv_backward_naive(dout, cache):
     # compute dx
     dx = np.zeros(x.shape)
     dw = np.zeros(w.shape)
+    db = np.zeros(b.shape)
     cubes_dx = {} # will be of length N
     cubes_dout = {} # will be of length N
     for i in range(N):
@@ -502,6 +503,11 @@ def conv_backward_naive(dout, cache):
                 for j in range(W_prime):
                     region = x_cube[:,stride*i:stride*i+HH,stride*j:stride*j+WW]
                     dw_cube += region * dout_cube[n,i,j]
+    
+    #compute db
+    for f in range(F):
+        for n in range(N):
+            db[f] += np.sum(dout[n,f,:,:])       
     
     ###########################################################################
     #                             END OF YOUR CODE                            #
