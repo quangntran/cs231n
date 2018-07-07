@@ -422,6 +422,7 @@ def conv_forward_naive(x, w, b, conv_param):
     for i in range(N):
         cubes_padded[str(i)] = np.array([planes_padded[str(3*i+c)] for c in range(C)])
     x = np.array([cubes_padded[str(i)] for i in range(N)])
+    
     def dot_product_two_cubes(cube1, cube2):
         new1 = np.reshape(cube1,(-1,1))
         new2 = np.reshape(cube2,(-1,1))
@@ -464,9 +465,35 @@ def conv_backward_naive(dout, cache):
     - db: Gradient with respect to b
     """
     dx, dw, db = None, None, None
+    (N, F, H_prime, W_prime) = dout.shape
+    (x, w, b, conv_param) = cache
+    (F, C, HH, WW) = w.shape
+    N, C, H, W = x.shape
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+
+
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
+    # compute dx
+    dx = np.zeros(x.shape)
+    cubes_dx = {} # will be of length N
+    cubes_dout = {} # will be of length N
+    for i in range(N):
+        dx_cube = dx[i,:,:,:]
+        dout_cube = dout[i,:,:,:]
+        for j in range(H_prime):
+            for k in range(W_prime):
+                region = dx_cube[:,stride*j:stride*j+HH,stride*k:stride*k+WW]
+                for f in range(F):
+                    region += w[f,:,:,:]*dout_cube[f,j,k]           
+
+    
+    #compute dw
+    
+
+    
     
     ###########################################################################
     #                             END OF YOUR CODE                            #
