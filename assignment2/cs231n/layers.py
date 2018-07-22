@@ -647,10 +647,10 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
         mask -= x.mean(axis=(0,2,3))
         mask /= (x.var(axis=(0,2,3))+eps)**.5
         out = gamma*mask + beta
-        x_hat=mask
+        x_hat= mask
         mu = x.mean(axis=(0,2,3))
         var = x.var(axis=(0,2,3))
-        cache = (x,mu,gamma,var,eps,x_hat)
+        cache = (x.transpose(0,2,3,1).reshape(N*H*W,C),mu,gamma,var,eps,x_hat)
         
     if mode == 'test':
         mask -= running_mean
@@ -688,7 +688,10 @@ def spatial_batchnorm_backward(dout, cache):
     # version of batch normalization defined above. Your implementation should#
     # be very short; ours is less than five lines.                            #
     ###########################################################################
-    pass
+    N, C, H, W = dout.shape
+    new_dout = dout.transpose(0,2,3,1).reshape(N*H*W,C)
+    dx, dgamma, dbeta = batchnorm_backward(new_dout, cache)
+    dx = dx.reshape(N,H,W,C).transpose(0,3,1,2)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
