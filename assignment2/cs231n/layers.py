@@ -629,8 +629,36 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # HINT: You can implement spatial batch normalization using the vanilla   #
     # version of batch normalization defined above. Your implementation should#
     # be very short; ours is less than five lines.                            #
-    ###########################################################################
-    pass
+    ###########################################################################    
+    mode = bn_param['mode']
+    eps = bn_param.get('eps', 1e-5)
+    momentum = bn_param.get('momentum', 0.9)
+    N, C, H, W = x.shape
+
+    running_mean = bn_param.get('running_mean', np.zeros((C, ), dtype=x.dtype))
+    running_var = bn_param.get('running_var', np.zeros((C, ), dtype=x.dtype))
+    
+    running_mean = momentum * running_mean + (1 - momentum) * x.mean(axis=(0,2,3))
+    running_var = momentum * running_var + (1 - momentum) * x.var(axis=(0,2,3))
+
+    mask = x.transpose(0,2,3,1).reshape(N*H*W,C)
+
+    if mode == 'train':       
+        mask -= x.mean(axis=(0,2,3))
+        mask /= (x.var(axis=(0,2,3))+eps)**.5
+        out = gamma*mask + beta
+        x_hat=mask
+        mu = x.mean(axis=(0,2,3))
+        var = x.var(axis=(0,2,3))
+        cache = (x,mu,gamma,var,eps,x_hat)
+        
+    if mode == 'test':
+        mask -= running_mean
+        mask /= (running_var+eps)**.5
+        out = gamma*mask + beta
+    out = out.reshape(N,H,W,C).transpose(0,3,1,2)
+    bn_param['running_mean'] = running_mean
+    bn_param['running_var'] = running_var
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
