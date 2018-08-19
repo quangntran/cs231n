@@ -42,7 +42,7 @@ class CaptioningRNN(object):
         self.idx_to_word = {i: w for w, i in word_to_idx.items()}
         self.params = {}
 
-        vocab_size = len(word_to_idx)
+        vocab_size = len(word_to_idx) #V
 
         self._null = word_to_idx['<NULL>']
         self._start = word_to_idx.get('<START>', None)
@@ -140,7 +140,40 @@ class CaptioningRNN(object):
         # Note also that you are allowed to make use of functions from layers.py   #
         # in your implementation, if needed.                                       #
         ############################################################################
-        pass
+        ##### FORWARD, TO COMPUTE LOSS
+        # (1)
+        h0 = features.dot(W_proj) + b_proj # (N,H)
+        
+        # (2) 
+        captions_in_vec, captions_in_cache = word_embedding_forward(captions_in, W_embed) #(N,T-1,W)
+        
+        # (3)
+        if self.cell_type == 'rnn':
+            h, h_cache = rnn_forward(captions_in_vec, h0, Wx, Wh, b) # h(N, T-1, H)
+        else:
+            h, h_cache = lstm_forward(captions_in_vec, h0, Wx, Wh, b) 
+        
+        # (4)
+        scores, scores_cache = temporal_affine_forward(h, W_vocab, b_vocab) # scores(N, T-1, V)
+        
+        # (5)
+        loss, dx_loss = temporal_softmax_loss(scores, captions_out, mask, verbose=False) # dx_loss(N, T-1, V)
+        
+        ##### BACKWARD, GRADIENTS
+        dscores, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dx_loss, scores_cache)
+        # dscores(N, T-1, H); grads['W_vocab'](H, V); grads['b_vocab'](V,)
+        
+        if self.cell_type == 'rnn':
+            dh, dh0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dscores, h_cache)
+            # dh(N, T-1, W); dh0 = (N, H); grads['Wx'](W,H); grads['Wh'](H,H); grads['b'](H,)
+        else:
+            dh, dh0, grads['Wx'], grads['Wh'], grads['b'] = lstm_backward(dscores, h_cache)
+        
+        grads['W_embed'] = word_embedding_backward(dh, captions_in_cache) # grads['W_embed'](V,W)
+        
+        grads['b_proj'] = np.sum(dh0, axis=0)
+        grads['W_proj'] = np.dot(features.T,dh0)
+        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -205,7 +238,28 @@ class CaptioningRNN(object):
         # NOTE: we are still working over minibatches in this function. Also if   #
         # you are using an LSTM, initialize the first cell state to zeros.        #
         ###########################################################################
-        pass
+        W, _ = Wx.shape
+        H, V = W_vocab.shape
+        h0 = features.dot(W_proj) + b_proj
+        next_h = h0
+        next_c = np.zeros(next_h.shape)
+        input_indices = np.ones((N,1), dtype=np.int32)*int(self._start)        
+        for t in range(max_length):    
+            input_vector, _ = word_embedding_forward(input_indices, W_embed)
+            # input_vector(N, 1, W)
+            input_vector = np.reshape(input_vector,(N,W))
+            if self.cell_type == 'rnn':
+                next_h, _ = rnn_step_forward(input_vector, next_h, Wx, Wh, b)
+            else: 
+                next_h, next_c, _ = lstm_step_forward(input_vector, next_h, next_c, Wx, Wh, b)
+            # next_h(N,H)
+            scores, _ = temporal_affine_forward(np.reshape(next_h, (N,1,H)), W_vocab, b_vocab)
+            # scores(N,1,V)
+            scores = np.reshape(scores,(N,V))
+            input_indices = np.argmax(scores, axis=1) # input_indices(1,N)
+            captions[:,t] = input_indices[:]
+            input_indices = np.argmax(scores, axis=1).T.reshape((N,1))
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
